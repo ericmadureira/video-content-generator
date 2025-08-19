@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Video Content Generator</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+		<style>
+			#playlists {
+				height: 300px;
+			}
+			#progress-container {
+				text-align: center;
+				margin-top: 20px;
+				display: none;
+			}
+			.spinner-border {
+				width: 3rem;
+				height: 3rem;
+			}
+			.alert {
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container mt-5">
+			<h1 class="mb-4">Automated Video Content Generator</h1>
+
+			<div class="mb-3">
+				<label for="planningData" class="form-label">Paste Planning Data:</label>
+				<textarea class="form-control" id="planningData" placeholder="Paste tab-separated data here..."></textarea>
+			</div>
+
+			<form id="videoForm" method="POST" action="/generate-content" enctype="multipart/form-data">
+				<div class="mb-3">
+					<label for="title" class="form-label">Title: </label>
+					<input type="text" class="form-control" id="title" name="title" placeholder="Video title goes here..." required>
+					<small id="title-size-label" class="form-text text-muted">Title size: 0 characters</small>
+				</div>
+
+				<label for="category">Category:</label>
+				<select id="category" name="category" class="form-control" required>
+					{% for category in playlists.keys() %}
+						<option value="{{ category }}">{{ category.capitalize() }}</option>
+					{% endfor %}
+				</select>
+				<br>
+
+				<div class="mb-3">
+					<label for="playlists">Select Playlists:</label>
+					<select id="playlists" name="playlists" multiple class="form-control">
+						{% if category in playlists %}
+							{% for playlist_id, title in playlists[category]|dictsort %}
+								<option value="{{ playlist_id }}">{{ title }}</option>
+							{% endfor %}
+						{% else %}
+							<option disabled>No playlists available</option>
+						{% endif %}
+					</select>
+				</div>
+
+				<div class="mb-3">
+					<label for="mainpoints" class="form-label">Main points: </label>
+					<input type="text" class="form-control" id="mainpoints" name="mainpoints" placeholder="Mainpoint 1, Mainpoint 2, Mainpoint 3, ..." required>
+				</div>
+
+				<div class="mb-3">
+					<label for="thumbnail" class="form-label">Upload Custom Thumbnail (Optional):</label>
+					<input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+				</div>
+
+				<div class="mb-3">
+					<label for="schedule_date" class="form-label">Schedule Upload (Optional):</label>
+					<input type="datetime-local" class="form-control" id="schedule_date" name="schedule_date">
+					<small class="form-text text-muted">Leave empty to upload immediately.</small>
+				</div>
+
+				<button type="submit" id="submitButton" class="btn btn-primary">Generate Video</button>
+			</form>
+
+			<div id="progress-container">
+				<div class="spinner-border text-primary" role="status">
+					<span class="visually-hidden">Generating...</span>
+				</div>
+				<p>Generating Video...</p>
+			</div>
+		</div>
+
+		<script>
+			const playlists = {{ playlists | tojson }};
+
+			const parsePastedSpreadsheetData = function() {
+				const data = this.value.split('\t');
+				if (data.length >= 3) {
+					const dateParts = data[0].split('/');
+					if (dateParts.length === 3) {
+						document.getElementById('schedule_date').value = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T15:00`;
+					}
+					title = data[1];
+					document.getElementById('title').value = title
+					document.getElementById('mainpoints').value = data[2];
+				}
+				updateTitleSize(title);
+			}
+
+			const resetProgressUI = function() {
+				document.getElementById('submitButton').disabled = false;
+				this.style.display = 'none';
+			}
+
+			const submitVideoEdit = function(event) {
+				event.preventDefault();
+				document.getElementById('submitButton').disabled = true;
+				document.getElementById('progress-container').innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Generating...</span></div><p>Generating Video...</p>';
+				document.getElementById('progress-container').style.display = 'block';
+
+				const formData = new FormData(this);
+				fetch('/generate-content', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.text())
+				.then(data => {
+					document.getElementById('progress-container').innerHTML = '<div class="alert alert-success">✅ Video Generated Successfully!</div>';
+					console.log("Response:", data);
+				})
+				.catch(error => {
+					document.getElementById('progress-container').innerHTML = '<div class="alert alert-danger">❌ Error Generating Video</div>';
+					console.error("Error:", error);
+				});
+			}
+
+			const updatePlaylistSelector = function() {
+				const selectedCategory = this.value || "{{ category }}";
+				const playlistsSelect = document.getElementById('playlists');
+				playlistsSelect.innerHTML = '';
+
+				if (playlists[selectedCategory]) {
+					Object.entries(playlists[selectedCategory]).sort((a, b) => a[1].localeCompare(b[1])).forEach(([id, name]) => {
+						const option = document.createElement('option');
+						option.value = id;
+						option.textContent = name;
+						playlistsSelect.appendChild(option);
+					});
+				} else {
+					const option = document.createElement('option');
+					option.textContent = "No playlists available";
+					option.disabled = true;
+					playlistsSelect.appendChild(option);
+				}
+			}
+
+			const updateTitleSize = function(newTitle) {
+				let newValue;
+				if (typeof newTitle === 'string'){
+					newValue = newTitle;
+				} else {
+					newValue = newTitle.target.value;
+				}
+				document.getElementById('title-size-label').textContent = `Title size: ${newValue.length} characters`;
+			}
+
+			updatePlaylistSelector();
+
+			document.getElementById('category').addEventListener('change', updatePlaylistSelector);
+
+			document.getElementById('title').addEventListener('change', updateTitleSize);
+
+			document.getElementById('planningData').addEventListener('input', parsePastedSpreadsheetData);
+
+			document.getElementById('videoForm').addEventListener('submit', submitVideoEdit);
+
+			document.getElementById('progress-container').addEventListener('click', resetProgressUI);
+		</script>
+	</body>
+</html>

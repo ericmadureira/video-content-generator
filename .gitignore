@@ -1,0 +1,52 @@
+# Secret environment variables like API keys
+.env
+
+# Python virtual environment
+venv/
+
+# Python cache
+__pycache__/
+
+# Dependency files that can be recreated
+*.log
+*.pyc
+*.pyo
+*.pyd
+
+# Do not share your credentials everywhere!
+credentials/
+
+# FFmpeg output and generated media files
+scripts/
+thumbnails/
+video_output/
+
+# Keep assets/, bgm/ and logo/ folders but not their contents because they're private.
+assets/**
+!assets/bgm/
+!assets/logo/
+assets/bgm/*
+assets/logo/*
+playlists/**
+upload_defaults.py
+channels_presets.py
+
+# Image reports
+image_summary.json
+missing_image_topics.json
+renamed_images.json
+
+# Temporary or generated script files
+test-script.py
+
+# Docker-related ignored files
+docker-compose.override.yml
+
+# Git-related files
+.DS_Store
+*.swp
+*.swo
+*.swn
+
+# System files
+Thumbs.db

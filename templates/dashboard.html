@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Automated Content Dashboard</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+		<style>
+			#playlists {
+				height: 300px;
+			}
+			#progress-container {
+				text-align: center;
+				margin-top: 20px;
+				display: none;
+			}
+			.spinner-border {
+				width: 3rem;
+				height: 3rem;
+			}
+			.alert {
+				cursor: pointer;
+			}
+			body {
+				font-size: 0.95rem;
+			}
+			label.form-label {
+				margin-bottom: 0.25rem;
+			}
+			textarea, input[type="text"], select, input[type="datetime-local"] {
+				padding: 0.25rem 0.5rem;
+			}
+			.form-control {
+				font-size: 0.9rem;
+			}
+			#playlists {
+				height: 200px;
+			}
+			#progress-container {
+				text-align: center;
+				margin-top: 20px;
+				display: none;
+			}
+			.spinner-border {
+				width: 2rem;
+				height: 2rem;
+			}
+			.alert {
+				cursor: pointer;
+			}
+			#darkModeToggle {
+				position: absolute;
+				top: 1rem;
+				right: 1rem;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="form-check form-switch" id="darkModeToggle">
+			<input class="form-check-input" type="checkbox" id="toggleDarkMode">
+			<label class="form-check-label" for="toggleDarkMode">Dark Mode</label>
+		</div>
+		<div class="container mt-5">
+			<h1 class="mb-4 text-center">Automated Content Dashboard</h1>
+
+			<audio id="successSound" src="/static/sound_effects/success.mp3"></audio>
+			<audio id="errorSound" src="/static/sound_effects/error.mp3"></audio>
+
+			<ul class="nav nav-tabs" id="dashboardTabs">
+				<li class="nav-item">
+					<a class="nav-link active" data-bs-toggle="tab" href="#videoGenerator">🎬 Video Generator</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" data-bs-toggle="tab" href="#imageManager">🖼️ Image Manager</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" data-bs-toggle="tab" href="#youtubeUploader">📤 YouTube Uploader</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" data-bs-toggle="tab" href="#logs">🔍 Logs & Status</a>
+				</li>
+			</ul>
+
+			<div class="tab-content mt-4">
+				<!-- Tab 1: Video Generator -->
+				<div class="tab-pane fade show active" id="videoGenerator">
+					<h3>🎬 Generate a Video</h3>
+					<div class="container mt-5">
+						<div class="mb-3">
+							<label for="planningData" class="form-label">Paste Planning Data:</label>
+							<textarea class="form-control" id="planningData" placeholder="Paste tab-separated data here..."></textarea>
+						</div>
+						<form id="videoForm" method="POST" action="/generate-content" enctype="multipart/form-data">
+							<div class="mb-3">
+								<label for="title" class="form-label">Title: </label>
+								<input type="text" class="form-control" id="title" name="title" placeholder="Video title goes here..." required>
+								<small id="title-size-label" class="form-text text-muted">Title size: 0 characters</small>
+							</div>
+							<label for="category">Category:</label>
+							<select id="category" name="category" class="form-control" required>
+								{% for category in playlists.keys() %}
+									<option value="{{ category }}">{{ category.capitalize() }}</option>
+								{% endfor %}
+							</select>
+							<br>
+							<div class="mb-3">
+								<label for="playlists">Select Playlists:</label>
+								<select id="playlists" name="playlists" multiple class="form-control">
+									{% if category in playlists %}
+										{% for playlist_id, title in playlists[category]|dictsort %}
+											<option value="{{ playlist_id }}">{{ title }}</option>
+										{% endfor %}
+									{% else %}
+										<option disabled>No playlists available</option>
+									{% endif %}
+								</select>
+							</div>
+							<div class="mb-3">
+								<label for="mainpoints" class="form-label">Main points: </label>
+								<input type="text" class="form-control" id="mainpoints" name="mainpoints" placeholder="Mainpoint 1, Mainpoint 2, Mainpoint 3, ..." required>
+							</div>
+
+							<div class="mb-3">
+								<label for="custom_intro_files" class="form-label">Custom Intro videos or images (in order):</label>
+								<br>
+								<div id="custom-assets-container">
+									<label>⬤ Custom file 1:</label>
+									<input type="file" name="custom_intro_files[]" accept=".jpg,.jpeg,.png,.mp4,.mov,.webm">
+								</div>
+								<button type="button" onclick="addIntroAssetInput()">add custom</button>
+							</div>
+
+							<div class="mb-3">
+								<label for="schedule_date" class="form-label">Schedule Upload (Optional):</label>
+								<input type="datetime-local" class="form-control" id="schedule_date" name="schedule_date">
+								<small class="form-text text-muted">Leave empty to upload immediately.</small>
+							</div>
+							<div class="mb-3">
+								<label for="run_until" class="form-label">Run process until step:</label>
+								<select id="run_until" name="run_until" class="form-control">
+									<option value="script">📝 Script Only</option>
+									<option value="tts">🎤 Script + TTS</option>
+									<option value="images">🖼️ + Images</option>
+									<option value="video">🎬 + Video</option>
+									<option value="upload" selected>📤 Full Process (Upload)</option>
+								</select>
+							</div>
+							<button type="submit" id="submitButton" class="btn btn-primary">Generate Video</button>
+						</form>
+						<div id="progress-container">
+							<div class="spinner-border text-primary" role="status">
+								<span class="visually-hidden">Generating...</span>
+							</div>
+							<p>Generating Video...</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tab 2: Image Manager -->
+				<div class="tab-pane fade" id="imageManager">
+					<!-- Sub-tabs nav buttons -->
+					<ul class="nav nav-pills mb-3" id="imageManagerTabs">
+						<li class="nav-item">
+							<a class="nav-link active" data-bs-toggle="pill" href="#bulkImageCheckTab">🔍 Bulk Image Check</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" data-bs-toggle="pill" href="#renameTab">🔠 Rename Images</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" data-bs-toggle="pill" href="#summaryTab">📊 Generate Summary</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" data-bs-toggle="pill" href="#convertVerticalTab">🔄 Convert Vertical Images</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" data-bs-toggle="pill" href="#convertWebpTab">🔄 Convert Convert WEBP to JPG</a>
+						</li>
+					</ul>
+
+					<div class="tab-content small">
+						<!-- Subtab 2.1: Bulk Image Check -->
+						<div class="tab-pane fade show active" id="bulkImageCheckTab">
+							<h4 class="mt-4">🧾 Bulk Image Availability Checker</h4>
+							<form id="bulkCheckForm">
+								<div class="mb-2">
+									<label for="topicList" class="form-label">Paste topics (comma or new line):</label>
+									<textarea class="form-control" id="topicList" rows="5" placeholder="Tomate, Pepino, Cebolla..."></textarea>
+								</div>
+								<button class="btn btn-sm btn-outline-dark me-2" type="submit">🔍 Check</button>
+								<button class="btn btn-sm btn-outline-secondary" type="button" id="resetBulkCheck">🔁 Reset</button>
+							</form>
+							<div id="bulkCheckResult" class="mt-2"></div>
+						</div>
+
+						<!-- Subtab 2.2: Rename Images -->
+						<div class="tab-pane fade" id="renameTab">
+							<h5 class="mt-3">🔠 Rename Images</h5>
+							<p>Rename all images using hash names.</p>
+							<button class="btn btn-sm btn-secondary" id="triggerRenameImages">Rename Images Now</button>
+							<div id="renameImagesResult" class="mt-2"></div>
+						</div>
+
+						<!-- Subtab 2.3: Generate Summary -->
+						<div class="tab-pane fade" id="summaryTab">
+							<h5 class="mt-3">📊 Generate Image Summary</h5>
+							<p>Creates a tag-based summary of all images.</p>
+							<button class="btn btn-sm btn-warning" id="triggerGenerateSummary">Generate Summary Now</button>
+							<div id="generateSummaryResult" class="mt-2"></div>
+						</div>
+
+						<!-- Subtab 2.4: Convert Vertical -->
+						<div class="tab-pane fade" id="convertVerticalTab">
+							<h5 class="mt-3">🔄 Convert Vertical Images to Horizontal</h5>
+							<p>Blur-pads vertical images into 16:9 format with the image centered. Outputs to the same folder.</p>
+							<form id="convertVerticalForm">
+								<div class="mb-3">
+									<label for="vertical_folder_input" class="form-label">Select folder with images:</label>
+									<input type="text" class="form-control" id="vertical_folder_input" name="folder_path" placeholder="C:\IMAGE_DB\SomeFolder" required>
+								</div>
+								<button class="btn btn-sm btn-success" type="submit">Convert Now</button>
+							</form>
+							<div id="verticalResult" class="mt-2 text-success fw-bold"></div>
+						</div>
+
+						<!-- Subtab 2.5: Convert WEBP to JPG -->
+						<div class="tab-pane fade" id="convertWebpTab">
+							<h5 class="mt-3">🔄 Convert WEBP to JPG</h5>
+							<p>Converts all .webp images in the selected folder into high-quality .jpg and deletes the originals. Works only on files in the selected folder.</p>
+							<form id="convertWebpForm">
+								<div class="mb-3">
+									<label for="webp_folder_input" class="form-label">Folder with .webp images:</label>
+									<input type="text" class="form-control" id="webp_folder_input" name="folder_path" placeholder="C:\IMAGE_DB\SomeFolder" required>
+								</div>
+								<button class="btn btn-sm btn-warning" type="submit">Convert Now</button>
+							</form>
+							<div id="webpResult" class="mt-2 text-success fw-bold"></div>
+						</div>
+					</div>
+				</div>
+
+
+				<!-- Tab 3: YouTube Uploader -->
+				<div class="tab-pane fade" id="youtubeUploader">
+					<button class="btn btn-outline-primary mt-3" id="refreshPlaylists">🔄 Refresh Playlists List</button>
+					<pre id="refreshResult" class="mt-3"></pre>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			$(document).ready(function() {
+				$('#checkImages').click(function() {
+					$.post('/bulk_image_availability_check', function(response) {
+						alert(response);
+					});
+				});
+
+				$('#renameImages').click(function() {
+					$.post('/rename_images', function(response) {
+						alert(response);
+					});
+				});
+
+				$('#generateImageSummary').click(function() {
+					$.post('/generate_image_summary', function(response) {
+						alert(response);
+					});
+				});
+
+				$('#uploadVideos').click(function() {
+					$.post('/youtube_uploader', function(response) {
+						alert(response);
+					});
+				});
+			});
+
+			const playlists = {{ playlists | tojson }};
+
+			// HANDLERS
+			const convertImageToVertical = function (e) {
+				e.preventDefault();
+
+				const input = document.getElementById('vertical_folder_input');
+				const folderPath = input.value.trim();
+				if (!folderPath) {
+					alert("No folderPath was provided in vertical_folder_input.")
+					return;
+				}
+
+				fetch('/convert-vertical', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: new URLSearchParams({ folder_path: folderPath })
+				})
+				.then(response => response.text())
+				.then(data => {
+					document.getElementById('verticalResult').textContent = data;
+				})
+				.catch(error => {
+					document.getElementById('verticalResult').textContent = '❌ Error during conversion.';
+					console.error(error);
+				});
+			}
+
+			const convertWebpToJpg = function (e) {
+				e.preventDefault();
+
+				const input = document.getElementById('webp_folder_input');
+				const folderPath = input.value.trim();
+				if (!folderPath) {
+					alert("No folderPath was provided in webp_folder_input.")
+					return;
+				}
+
+				fetch('/convert-webp', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: new URLSearchParams({ folder_path: folderPath })
+				})
+				.then(response => response.text())
+				.then(data => {
+					document.getElementById('webpResult').textContent = data;
+				})
+				.catch(error => {
+					document.getElementById('webpResult').textContent = '❌ Error during conversion.';
+					console.error(error);
+				});
+			}
+
+			let customFileCount = 0;
+			const addIntroAssetInput = () => {
+				if (customFileCount <= 6) {
+					const container = document.getElementById("custom-assets-container");
+					const newInput = document.createElement("input");
+					const newLabel = document.createElement("label");
+					newLabel.innerText = `⬤ Custom file ${customFileCount}:`;
+					newInput.type = "file";
+					newInput.name = "custom_intro_files[]";
+					newInput.accept = ".jpg,.jpeg,.png,.mp4,.mov,.webm";
+					container.appendChild(document.createElement("br"));
+					container.appendChild(newLabel);
+					container.appendChild(newInput);
+					customFileCount++;
+				}
+			}
+
+			const parsePastedSpreadsheetData = function() {
+				const data = this.value.split('\t');
+				if (data.length >= 3) {
+					const dateParts = data[0].split('/');
+					if (dateParts.length === 3) {
+						document.getElementById('schedule_date').value = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T15:00`;
+					}
+					title = data[1];
+					document.getElementById('title').value = title
+					document.getElementById('mainpoints').value = data[2];
+				}
+				updateTitleSize(title);
+			}
+
+			const resetProgressUI = function() {
+				document.getElementById('submitButton').disabled = false;
+				this.style.display = 'none';
+			}
+
+			const submitVideoEdit = function(event) {
+				event.preventDefault();
+				document.getElementById('submitButton').disabled = true;
+				document.getElementById('progress-container').innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Generating...</span></div><p>Generating Video...</p>';
+				document.getElementById('progress-container').style.display = 'block';
+
+				const formData = new FormData(this);
+				fetch('/generate-content', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.text())
+				.then(data => {
+					document.getElementById('progress-container').innerHTML = '<div class="alert alert-success">✅ Video Generated Successfully!</div>';
+					document.getElementById('successSound').play();
+					console.log("Response:", data);
+				})
+				.catch(error => {
+					document.getElementById('progress-container').innerHTML = '<div class="alert alert-danger">❌ Error Generating Video</div>';
+					document.getElementById('errorSound').play();
+					console.error("Error:", error);
+				});
+			}
+
+			const updatePlaylistSelector = function() {
+				const selectedCategory = this.value || "{{ category }}";
+				const playlistsSelect = document.getElementById('playlists');
+				playlistsSelect.innerHTML = '';
+
+				if (playlists[selectedCategory]) {
+					Object.entries(playlists[selectedCategory]).sort((a, b) => a[1].localeCompare(b[1])).forEach(([id, name]) => {
+						const option = document.createElement('option');
+						option.value = id;
+						option.textContent = name;
+						playlistsSelect.appendChild(option);
+					});
+				} else {
+					const option = document.createElement('option');
+					option.textContent = "No playlists available";
+					option.disabled = true;
+					playlistsSelect.appendChild(option);
+				}
+			}
+
+			const updateTitleSize = function(newTitle) {
+				let newValue;
+				if (typeof newTitle === 'string'){
+					newValue = newTitle;
+				} else {
+					newValue = newTitle.target.value;
+				}
+				document.getElementById('title-size-label').textContent = `Title size: ${newValue.length} characters`;
+			}
+
+			const submitImageBulkCheck = function (e) {
+				e.preventDefault();
+				const topics = $('#topicList').val();
+				if (!topics.trim()) {
+					alert("❗ Please enter at least one topic.");
+					return;
+				}
+				$('#bulkCheckResult').html("⏳ Checking...");
+
+				$.post("/bulk_image_availability_check", { topics }, function (response) {
+					$('#bulkCheckResult').html(`<pre>${response}</pre>`);
+				}).fail(function () {
+					$('#bulkCheckResult').html("❌ Error checking topics.");
+				});
+			}
+
+			const resetImageBulkCheck = function () {
+				$('#topicList').val('');
+				$('#bulkCheckResult').empty();
+			}
+
+			const updatePlaylists = function () {
+				$('#refreshResult').text("⏳ Updating playlists...");
+
+				$.post("/update_playlists", function (data) {
+					let output = "✅ Playlist Update Result:\n";
+					for (const [channel, result] of Object.entries(data)) {
+						output += `• ${channel}: ${result}\n`;
+					}
+					$('#refreshResult').text(output);
+				}).fail(function () {
+					$('#refreshResult').text("❌ Failed to update playlists.");
+				});
+			}
+
+			const renameImages = function () {
+				$('#renameImagesResult').html("⏳ Renaming...");
+				$.post('/rename_images', function (response) {
+					$('#renameImagesResult').html(`<div class="alert alert-success">✅ ${response}</div>`);
+				}).fail(function () {
+					$('#renameImagesResult').html('<div class="alert alert-danger">❌ Error renaming images.</div>');
+				});
+			}
+
+			const generateSummary = function () {
+				$('#generateSummaryResult').html("⏳ Generating summary...");
+				$.post('/generate_image_summary', function (response) {
+					$('#generateSummaryResult').html(`<pre>${response}</pre>`);
+				}).fail(function () {
+					$('#generateSummaryResult').html('<div class="alert alert-danger">❌ Error generating summary.</div>');
+				});
+			}
+
+			// Runs once to update lists on load.
+			updatePlaylistSelector();
+
+			// EVENT LISTENERS
+
+			document.getElementById('category').addEventListener('change', updatePlaylistSelector);
+
+			document.getElementById('title').addEventListener('change', updateTitleSize);
+
+			document.getElementById('planningData').addEventListener('input', parsePastedSpreadsheetData);
+
+			document.getElementById('videoForm').addEventListener('submit', submitVideoEdit);
+
+			document.getElementById('progress-container').addEventListener('click', resetProgressUI);
+
+			document.getElementById('convertVerticalForm').addEventListener('submit', convertImageToVertical);
+
+			document.getElementById('convertWebpForm').addEventListener('submit', convertWebpToJpg);
+
+			$('#bulkCheckForm').submit(submitImageBulkCheck);
+
+			$('#resetBulkCheck').click(resetImageBulkCheck);
+
+			$('#refreshPlaylists').click(updatePlaylists);
+
+			$('#triggerRenameImages').click(renameImages);
+
+			$('#triggerGenerateSummary').click(generateSummary);
+		</script>
+	</body>
+</html>
