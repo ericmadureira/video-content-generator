@@ -12,7 +12,7 @@
 Once you have your virtual environment active, install the required dependencies by running:
 `pip install -r requirements.txt`
 or try this if first fails:
-`pip install python-dotenv flask openai requests numpy edge_tts ffmpeg-python Pillow`
+`pip install python-dotenv flask openai requests numpy edge_tts ffmpeg-python Pillow jsonschema pydantic`
 
 ### Step 3: Add environment variables
 

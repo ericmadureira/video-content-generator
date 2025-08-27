@@ -13,8 +13,11 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Do not share your credentials everywhere!
+# Personal folders, NEVER SHARE!
 credentials/
+channels/.local/
+editing_styles/.local/
+prompts/.local/
 
 # FFmpeg output and generated media files
 scripts/

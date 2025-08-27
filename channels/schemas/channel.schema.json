@@ -1,0 +1,61 @@
+{
+  "$id": "https://example.com/channel.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ChannelProfile",
+  "type": "object",
+  "required": ["name", "uploader", "templates"],
+  "properties": {
+    "name": { "type": "string" },
+    "extends": { "type": "string" },
+    "uploader": { "type": "string", "enum": ["youtube", "none"] },
+    "upload_profile": { "type": "string" },
+    "locale": { "type": "string", "default": "pt-BR" },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "visibility": { "type": "string", "enum": ["public", "unlisted", "private"], "default": "unlisted" },
+        "categoryId": { "type": "string", "default": "27" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "hashtags": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "templates": {
+      "type": "object",
+      "required": ["title", "description"],
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "playlist": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "tts": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string", "enum": ["edge", "gcp"], "default": "edge" },
+        "voice": { "type": "string" },
+        "speed": { "type": "number", "default": 1.0 }
+      },
+      "additionalProperties": false
+    },
+    "script_prompt": { "type": "string" },
+    "style": {
+      "type": "object",
+      "properties": {
+        "style_file": { "type": "string" },
+        "watermark": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "allow_upload": { "type": "boolean", "default": true },
+        "dry_run": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

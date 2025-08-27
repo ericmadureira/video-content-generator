@@ -1,0 +1,20 @@
+{
+  "$schema": "./schemas/channel.schema.json",
+  "name": "demo",
+  "uploader": "none",
+  "locale": "en-US",
+  "defaults": {
+    "visibility": "unlisted",
+    "categoryId": "27",
+    "tags": ["demo", "vgen"],
+    "hashtags": ["#demo", "#vgen"]
+  },
+  "templates": {
+    "title": "{title} | Demo Channel",
+    "description": "Summary: {summary}\nChapters:\n{chapters}\n{hashtags}"
+  },
+  "tts": { "provider": "edge", "voice": "en-US-JennyNeural", "speed": 1.0 },
+  "script_prompt": "Write a clear, friendly, 5-section script about: {topic}.",
+  "style": { "style_file": "vgen/styles/samples/style_default.json" },
+  "policy": { "allow_upload": false, "dry_run": true }
+}
