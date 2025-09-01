@@ -55,7 +55,8 @@
         "dry_run": { "type": "boolean", "default": false }
       },
       "additionalProperties": false
-    }
+    },
+    "video_creator": { "type": "string" }
   },
   "additionalProperties": false
 }

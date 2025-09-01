@@ -44,9 +44,7 @@ app = Flask(__name__, template_folder=os.path.join(os.getcwd(), 'templates'))
 ai_client = OpenAI(api_key=openai_api_key)
 
 ACTIVE_CHANNELS = [
-	"gardening",
-	# "health",
-	# "diabetes"
+	"gardening"
 ]
 
 
